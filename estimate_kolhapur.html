@@ -565,7 +565,7 @@
       </div>
       <div class="form-group autocomplete-wrap">
         <label>Search Item — Code or Description</label>
-        <input type="text" id="item-search" placeholder="Type item code (e.g. 27.01) or keyword (e.g. brick masonry)..." autocomplete="off" />
+        <input type="text" id="item-search" placeholder="🔍 Type code (e.g. 27.01) or keyword (e.g. brick, plastering, pipe)... then click an item from the list" autocomplete="off" />
         <div class="autocomplete-list" id="ac-list"></div>
       </div>
     </div>
@@ -687,6 +687,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Search
   document.getElementById('item-search').addEventListener('input', onSearchInput);
   document.getElementById('item-search').addEventListener('keydown', onSearchKeydown);
+  document.getElementById('item-search').addEventListener('focus', () => {
+    // Show dropdown on focus if no item selected yet
+    if (!selectedItem) onSearchInput();
+  });
   document.getElementById('chapter-filter').addEventListener('change', () => {
     document.getElementById('item-search').value = '';
     selectedItem = null;
@@ -719,6 +723,9 @@ function getFilteredItems(query) {
 
 function onSearchInput() {
   const val = document.getElementById('item-search').value.trim();
+  // Clear selection when user manually types
+  selectedItem = null;
+  document.getElementById('item-detail').classList.remove('visible');
   acResults = getFilteredItems(val);
   acActiveIdx = -1;
   renderAc(val);
@@ -790,7 +797,26 @@ function selectItem(item) {
 
 // ===== ADD ITEM =====
 function addItem() {
-  if (!selectedItem) { showToast('⚠ Please select a DSR item first.', 'error'); return; }
+  // If nothing selected but there are results, auto-select the first/only match
+  if (!selectedItem) {
+    if (acResults.length === 1) {
+      selectItem(acResults[0]);
+    } else if (acResults.length > 1) {
+      // Show dropdown so user can pick
+      renderAc(document.getElementById('item-search').value.trim());
+      document.getElementById('item-search').focus();
+      showToast('⚠ Please click an item from the dropdown list.', 'error');
+      return;
+    } else {
+      document.getElementById('item-search').focus();
+      const inp = document.getElementById('item-search');
+      inp.style.borderColor = '#C0392B';
+      inp.style.boxShadow = '0 0 0 3px rgba(192,57,43,0.2)';
+      setTimeout(() => { inp.style.borderColor = ''; inp.style.boxShadow = ''; }, 2000);
+      showToast('⚠ Please search and click an item from the dropdown list.', 'error');
+      return;
+    }
+  }
   const qtyVal = document.getElementById('item-qty').value;
   const qty = parseFloat(qtyVal);
   if (!qty || qty <= 0) { showToast('⚠ Please enter a valid quantity.', 'error'); return; }
